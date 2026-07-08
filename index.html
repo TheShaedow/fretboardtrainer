@@ -177,8 +177,10 @@
 
     function scoreY(midi){
       const STAFF_BOTTOM_Y = 135;
-      const DIATONIC_STEP_PX = 5;
-      // Violinschlüssel: unterste Linie = E4. Bassschlüssel: unterste Linie = G2.
+      // Eine diatonische Stufe entspricht dem Abstand Linie-Zwischenraum.
+      // Die Notenlinien liegen 20 px auseinander, daher sind es 10 px pro Tonstufe.
+      const DIATONIC_STEP_PX = 10;
+      // Violinschlüssel: unterste Linie = E4. Bass-/F-Schlüssel: unterste Linie = G2.
       const referenceMidi = scoreClef() === 'bass' ? 43 : 64;
       return STAFF_BOTTOM_Y - (diatonicIndex(midi) - diatonicIndex(referenceMidi)) * DIATONIC_STEP_PX;
     }
@@ -186,14 +188,30 @@
     function updateClef(){
       if(scoreClef() === 'bass'){
         clefSymbol.textContent = '𝄢';
-        clefSymbol.setAttribute('x','48');
-        clefSymbol.setAttribute('y','123');
-        clefSymbol.setAttribute('font-size','74');
+        // Der F-Schlüssel wird so platziert, dass sein Zentrum auf der F-Linie liegt
+        // (= zweite Notenlinie von oben, y=75).
+        clefSymbol.setAttribute('x','42');
+        clefSymbol.setAttribute('y','121');
+        clefSymbol.setAttribute('font-size','82');
       } else {
         clefSymbol.textContent = '𝄞';
         clefSymbol.setAttribute('x','43');
         clefSymbol.setAttribute('y','132');
         clefSymbol.setAttribute('font-size','84');
+      }
+    }
+
+    function drawLedgerLines(x,y){
+      // Hilfslinien gehören nur auf Linienpositionen, nicht in Zwischenräume.
+      for(let ly=155; ly<=y+1; ly+=20){
+        const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+        l.setAttribute('x1',x-20); l.setAttribute('x2',x+20); l.setAttribute('y1',ly); l.setAttribute('y2',ly);
+        l.setAttribute('stroke','#111827'); l.setAttribute('stroke-width','2'); scoreNotes.appendChild(l);
+      }
+      for(let ly=35; ly>=y-1; ly-=20){
+        const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+        l.setAttribute('x1',x-20); l.setAttribute('x2',x+20); l.setAttribute('y1',ly); l.setAttribute('y2',ly);
+        l.setAttribute('stroke','#111827'); l.setAttribute('stroke-width','2'); scoreNotes.appendChild(l);
       }
     }
 
@@ -203,8 +221,7 @@
       selected.forEach((midi,idx)=>{
         const displayMidi=scoreDisplayMidi(midi);
         const x=165 + idx*34 - Math.max(0,selected.length-1)*17, y=scoreY(displayMidi);
-        for(let ly=145; ly<=y+1; ly+=10){ const l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',x-20); l.setAttribute('x2',x+20); l.setAttribute('y1',ly); l.setAttribute('y2',ly); l.setAttribute('stroke','#111827'); l.setAttribute('stroke-width','2'); scoreNotes.appendChild(l); }
-        for(let ly=45; ly>=y-1; ly-=10){ const l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',x-20); l.setAttribute('x2',x+20); l.setAttribute('y1',ly); l.setAttribute('y2',ly); l.setAttribute('stroke','#111827'); l.setAttribute('stroke-width','2'); scoreNotes.appendChild(l); }
+        drawLedgerLines(x,y);
         const accidental = accidentalModeEl.value === 'flat' ? ({1:'♭',3:'♭',6:'♭',8:'♭',10:'♭'}[noteClass(displayMidi)] || '') : ({1:'♯',3:'♯',6:'♯',8:'♯',10:'♯'}[noteClass(displayMidi)] || '');
         if(accidental){const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',x-48); t.setAttribute('y',y+8); t.setAttribute('font-size','25'); t.setAttribute('fill','#111827'); t.setAttribute('font-family','Georgia,serif'); t.textContent=accidental; scoreNotes.appendChild(t)}
         const e=document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.setAttribute('cx',x); e.setAttribute('cy',y); e.setAttribute('rx','10.5'); e.setAttribute('ry','7'); e.setAttribute('fill','#0f172a'); e.setAttribute('transform',`rotate(-18 ${x} ${y})`); scoreNotes.appendChild(e);
