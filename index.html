@@ -77,7 +77,7 @@
       </aside>
 
       <section class="card piano-card">
-        <div class="toggle-row"><h2 style="margin-right:auto">Pianotastatur</h2><span class="tiny">Bereich: C2 bis C6</span></div>
+        <div class="toggle-row"><h2 style="margin-right:auto">Pianotastatur</h2><span class="tiny" id="keyboardRangeLabel">Bereich: C2 bis C6</span></div>
         <div class="piano-wrap"><div class="piano" id="piano" aria-label="Pianotastatur"></div></div>
       </section>
     </main>
@@ -89,9 +89,9 @@
     const NOTE_LABELS_SHARP = ['C','Cis','D','Dis','E','F','Fis','G','Gis','A','Ais','H'];
     const NOTE_LABELS_FLAT  = ['C','Des','D','Es','E','F','Ges','G','As','A','B','H'];
     const INSTRUMENTS = {
-      guitar:{title:'Vertikales Gitarrengriffbrett', strings:[['E',40],['A',45],['D',50],['G',55],['H',59],['e',64]]},
-      bass4:{title:'Vertikales E-Bass-Griffbrett', strings:[['E',28],['A',33],['D',38],['G',43]]},
-      bass5:{title:'Vertikales E-Bass-5-Saiter-Griffbrett', strings:[['H',23],['E',28],['A',33],['D',38],['G',43]]}
+      guitar:{title:'Vertikales Gitarrengriffbrett', keyboardRange:'C2 bis C6', keyStart:36, keyEnd:84, strings:[['E',40],['A',45],['D',50],['G',55],['H',59],['e',64]]},
+      bass4:{title:'Vertikales E-Bass-Griffbrett', keyboardRange:'C1 bis C5', keyStart:24, keyEnd:72, strings:[['E',28],['A',33],['D',38],['G',43]]},
+      bass5:{title:'Vertikales E-Bass-5-Saiter-Griffbrett', keyboardRange:'A0 bis C5', keyStart:21, keyEnd:72, strings:[['H',23],['E',28],['A',33],['D',38],['G',43]]}
     };
     const noteClass = midi => ((midi % 12) + 12) % 12;
     const currentNames = () => accidentalModeEl?.value === 'flat' ? NOTE_NAMES_FLAT : NOTE_NAMES_SHARP;
@@ -104,7 +104,7 @@
 
     const fretboard = document.getElementById('fretboard'), piano = document.getElementById('piano'), scoreNotes = document.getElementById('scoreNotes');
     const instrumentEl = document.getElementById('instrument'), accidentalModeEl = document.getElementById('accidentalMode'), clearBtn = document.getElementById('clearBtn');
-    const noteNameEl = document.getElementById('noteName'), noteSubEl = document.getElementById('noteSub'), selectedList = document.getElementById('selectedList'), boardTitle = document.getElementById('boardTitle');
+    const noteNameEl = document.getElementById('noteName'), noteSubEl = document.getElementById('noteSub'), selectedList = document.getElementById('selectedList'), boardTitle = document.getElementById('boardTitle'), keyboardRangeLabel = document.getElementById('keyboardRangeLabel');
 
     function activeInstrument(){return INSTRUMENTS[instrumentEl.value];}
     function fretLinePositions(){
@@ -141,19 +141,22 @@
 
     function makeKeyboard(){
       piano.innerHTML=''; const whiteOrder=[0,2,4,5,7,9,11]; let whiteIndex=0; const whiteW=48;
-      for(let midi=36; midi<=84; midi++){
-        const cls=noteClass(midi), name=NOTE_NAMES[cls], oct=Math.floor(midi/12)-1;
+      const inst = activeInstrument();
+      if(keyboardRangeLabel) keyboardRangeLabel.textContent = 'Bereich: ' + inst.keyboardRange;
+      const startMidi = inst.keyStart, endMidi = inst.keyEnd;
+      for(let midi=startMidi; midi<=endMidi; midi++){
+        const cls=noteClass(midi), name=NOTE_NAMES_SHARP[cls], oct=Math.floor(midi/12)-1;
         if(whiteOrder.includes(cls)){
           const key=document.createElement('button'); key.className='white-key'; key.dataset.midi=midi; key.style.left=(whiteIndex*whiteW)+'px'; key.textContent=name+oct; piano.appendChild(key); whiteIndex++;
-          if(blackAfter[name]!==undefined && midi<84){const bk=document.createElement('button'); bk.className='black-key'; bk.dataset.midi=midi+1; bk.style.left=(whiteIndex*whiteW-16)+'px'; bk.textContent=(accidentalModeEl.value === 'flat' ? NOTE_LABELS_FLAT[noteClass(midi+1)] : NOTE_LABELS_SHARP[noteClass(midi+1)].replace('is','♯'))+oct; piano.appendChild(bk)}
+          if(blackAfter[name]!==undefined && midi<endMidi){const bk=document.createElement('button'); bk.className='black-key'; bk.dataset.midi=midi+1; bk.style.left=(whiteIndex*whiteW-16)+'px'; bk.textContent=(accidentalModeEl.value === 'flat' ? NOTE_LABELS_FLAT[noteClass(midi+1)] : NOTE_LABELS_SHARP[noteClass(midi+1)].replace('is','♯'))+oct; piano.appendChild(bk)}
         }
       }
       piano.style.minWidth=(whiteIndex*whiteW+12)+'px';
     }
 
     function scoreDisplayMidi(midi){
-      // Gitarre und Bass werden im Score eine Oktave höher notiert als sie klingen.
-      // Beispiel: klingendes Gitarren-E2 wird als E3 angezeigt.
+      // Gitarre und E-Bass werden im Score eine Oktave höher notiert als sie klingen.
+      // Beispiele: klingendes Gitarren-E2 wird als E3, klingendes Bass-E1 als E2 angezeigt.
       return midi + 12;
     }
 
@@ -210,7 +213,7 @@
       drawScore(); drawFretboard();
     }
     piano.addEventListener('click',e=>{const key=e.target.closest('button[data-midi]'); if(!key)return; const midi=Number(key.dataset.midi); selected = selected.includes(midi) ? selected.filter(x=>x!==midi) : [...selected,midi].sort((a,b)=>a-b); updateUI();});
-    clearBtn.addEventListener('click',()=>{selected=[];updateUI();}); instrumentEl.addEventListener('change',updateUI); accidentalModeEl.addEventListener('change',()=>{makeKeyboard(); updateUI();}); window.addEventListener('resize',drawFretboard);
+    clearBtn.addEventListener('click',()=>{selected=[];updateUI();}); instrumentEl.addEventListener('change',()=>{selected=[]; makeKeyboard(); updateUI();}); accidentalModeEl.addEventListener('change',()=>{makeKeyboard(); updateUI();}); window.addEventListener('resize',drawFretboard);
     makeKeyboard(); updateUI();
   </script>
 </body>
