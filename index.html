@@ -67,7 +67,7 @@
             <g stroke="#111827" stroke-width="2">
               <line x1="35" y1="55" x2="325" y2="55"/><line x1="35" y1="75" x2="325" y2="75"/><line x1="35" y1="95" x2="325" y2="95"/><line x1="35" y1="115" x2="325" y2="115"/><line x1="35" y1="135" x2="325" y2="135"/>
             </g>
-            <text x="43" y="132" font-size="84" fill="#111827" font-family="Georgia,serif">𝄞</text>
+            <text id="clefSymbol" x="43" y="132" font-size="84" fill="#111827" font-family="Georgia,serif">𝄞</text>
             <g id="scoreNotes"></g>
           </svg>
           <div class="noteName" id="noteName">Keine Auswahl</div><div class="noteSub" id="noteSub">Klicke eine oder mehrere Pianotasten.</div>
@@ -102,7 +102,7 @@
     const blackAfter = {C:1,D:3,F:6,G:8,A:10};
     let selected = [];
 
-    const fretboard = document.getElementById('fretboard'), piano = document.getElementById('piano'), scoreNotes = document.getElementById('scoreNotes');
+    const fretboard = document.getElementById('fretboard'), piano = document.getElementById('piano'), scoreNotes = document.getElementById('scoreNotes'), clefSymbol = document.getElementById('clefSymbol');
     const instrumentEl = document.getElementById('instrument'), accidentalModeEl = document.getElementById('accidentalMode'), clearBtn = document.getElementById('clearBtn');
     const noteNameEl = document.getElementById('noteName'), noteSubEl = document.getElementById('noteSub'), selectedList = document.getElementById('selectedList'), boardTitle = document.getElementById('boardTitle'), keyboardRangeLabel = document.getElementById('keyboardRangeLabel');
 
@@ -160,40 +160,46 @@
       return midi + 12;
     }
 
-    function scoreY(midi){
-      // Präzise Notenkopf-Position im Violinschlüssel.
-      // Bezugspunkt: unterste Linie = E4 bei y=135.
-      // Jede diatonische Stufe nach oben bewegt den Kopf exakt 5px nach oben:
-      // E4 Linie, F4 Zwischenraum, G4 Linie, A4 Zwischenraum, H4 Linie usw.
-      // Vorzeichen ändern nur das Symbol, nie die Linien-/Zwischenraumposition.
-      const STAFF_BOTTOM_E4_Y = 135;
-      const DIATONIC_STEP_PX = 5;
-      const PITCH_CLASS_TO_STEP_SHARP = {
-        0:0, 1:0,   // C, C#
-        2:1, 3:1,   // D, D#
-        4:2,        // E
-        5:3, 6:3,   // F, F#
-        7:4, 8:4,   // G, G#
-        9:5, 10:5,  // A, A#
-        11:6        // H natural
-      };
-      const PITCH_CLASS_TO_STEP_FLAT = {
-        0:0, 1:1,   // C, Des
-        2:1, 3:2,   // D, Es
-        4:2,        // E
-        5:3, 6:4,   // F, Ges
-        7:4, 8:5,   // G, As
-        9:5, 10:6,  // A, B
-        11:6        // H natural
-      };
-      const map = accidentalModeEl.value === 'flat' ? PITCH_CLASS_TO_STEP_FLAT : PITCH_CLASS_TO_STEP_SHARP;
-      const octave = Math.floor(midi / 12) - 1;
-      const stepFromC0 = octave * 7 + map[noteClass(midi)];
-      const e4StepFromC0 = 4 * 7 + 2;
-      return STAFF_BOTTOM_E4_Y - (stepFromC0 - e4StepFromC0) * DIATONIC_STEP_PX;
+    function scoreClef(){
+      return instrumentEl.value === 'guitar' ? 'treble' : 'bass';
     }
+
+    function diatonicIndex(midi){
+      // Exakte Notenzeilen-Position: Vorzeichen verändern nur den Notennamen,
+      // nicht die diatonische Stufe auf Linie/Zwischenraum.
+      const pc = noteClass(midi);
+      const sharpSteps = {0:0,1:0,2:1,3:1,4:2,5:3,6:3,7:4,8:4,9:5,10:5,11:6};
+      const flatSteps  = {0:0,1:1,2:1,3:2,4:2,5:3,6:4,7:4,8:5,9:5,10:6,11:6};
+      const steps = accidentalModeEl.value === 'flat' ? flatSteps : sharpSteps;
+      const octave = Math.floor(midi / 12) - 1;
+      return octave * 7 + steps[pc];
+    }
+
+    function scoreY(midi){
+      const STAFF_BOTTOM_Y = 135;
+      const DIATONIC_STEP_PX = 5;
+      // Violinschlüssel: unterste Linie = E4. Bassschlüssel: unterste Linie = G2.
+      const referenceMidi = scoreClef() === 'bass' ? 43 : 64;
+      return STAFF_BOTTOM_Y - (diatonicIndex(midi) - diatonicIndex(referenceMidi)) * DIATONIC_STEP_PX;
+    }
+
+    function updateClef(){
+      if(scoreClef() === 'bass'){
+        clefSymbol.textContent = '𝄢';
+        clefSymbol.setAttribute('x','48');
+        clefSymbol.setAttribute('y','123');
+        clefSymbol.setAttribute('font-size','74');
+      } else {
+        clefSymbol.textContent = '𝄞';
+        clefSymbol.setAttribute('x','43');
+        clefSymbol.setAttribute('y','132');
+        clefSymbol.setAttribute('font-size','84');
+      }
+    }
+
     function drawScore(){
       scoreNotes.innerHTML='';
+      updateClef();
       selected.forEach((midi,idx)=>{
         const displayMidi=scoreDisplayMidi(midi);
         const x=165 + idx*34 - Math.max(0,selected.length-1)*17, y=scoreY(displayMidi);
