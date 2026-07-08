@@ -44,6 +44,10 @@
           <option value="bass4">E-Bass · E A D G</option>
           <option value="bass5">E-Bass 5-Saiter · H E A D G</option>
         </select>
+        <select id="accidentalMode" aria-label="Enharmonische Schreibweise wählen">
+          <option value="sharp">Kreuz-Vorzeichen · ♯</option>
+          <option value="flat">B-Vorzeichen · ♭</option>
+        </select>
         <button id="clearBtn" title="Auswahl löschen">Zurücksetzen</button>
       </div>
     </header>
@@ -80,22 +84,26 @@
   </div>
 
   <script>
-    const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','H'];
-    const NOTE_DE = {'C':'C','C#':'Cis/Des','D':'D','D#':'Dis/Es','E':'E','F':'F','F#':'Fis/Ges','G':'G','G#':'Gis/As','A':'A','A#':'Ais/B','H':'H'};
+    const NOTE_NAMES_SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','H'];
+    const NOTE_NAMES_FLAT  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','B','H'];
+    const NOTE_LABELS_SHARP = ['C','Cis','D','Dis','E','F','Fis','G','Gis','A','Ais','H'];
+    const NOTE_LABELS_FLAT  = ['C','Des','D','Es','E','F','Ges','G','As','A','B','H'];
     const INSTRUMENTS = {
       guitar:{title:'Vertikales Gitarrengriffbrett', strings:[['E',40],['A',45],['D',50],['G',55],['H',59],['e',64]]},
       bass4:{title:'Vertikales E-Bass-Griffbrett', strings:[['E',28],['A',33],['D',38],['G',43]]},
       bass5:{title:'Vertikales E-Bass-5-Saiter-Griffbrett', strings:[['H',23],['E',28],['A',33],['D',38],['G',43]]}
     };
     const noteClass = midi => ((midi % 12) + 12) % 12;
-    const noteName = midi => NOTE_NAMES[noteClass(midi)] + (Math.floor(midi/12)-1);
-    const labelFor = midi => NOTE_DE[NOTE_NAMES[noteClass(midi)]] + (Math.floor(midi/12)-1);
+    const currentNames = () => accidentalModeEl?.value === 'flat' ? NOTE_NAMES_FLAT : NOTE_NAMES_SHARP;
+    const currentLabels = () => accidentalModeEl?.value === 'flat' ? NOTE_LABELS_FLAT : NOTE_LABELS_SHARP;
+    const noteName = midi => currentNames()[noteClass(midi)] + (Math.floor(midi/12)-1);
+    const labelFor = midi => currentLabels()[noteClass(midi)] + (Math.floor(midi/12)-1);
     const colorClass = midi => 'c' + noteClass(midi);
     const blackAfter = {C:1,D:3,F:6,G:8,A:10};
     let selected = [];
 
     const fretboard = document.getElementById('fretboard'), piano = document.getElementById('piano'), scoreNotes = document.getElementById('scoreNotes');
-    const instrumentEl = document.getElementById('instrument'), clearBtn = document.getElementById('clearBtn');
+    const instrumentEl = document.getElementById('instrument'), accidentalModeEl = document.getElementById('accidentalMode'), clearBtn = document.getElementById('clearBtn');
     const noteNameEl = document.getElementById('noteName'), noteSubEl = document.getElementById('noteSub'), selectedList = document.getElementById('selectedList'), boardTitle = document.getElementById('boardTitle');
 
     function activeInstrument(){return INSTRUMENTS[instrumentEl.value];}
@@ -128,7 +136,7 @@
       }
       [3,5,7,9,12,15].forEach(f=>{const m=document.createElement('div'); m.className='marker'; m.style.left='50%'; m.style.top=yForFret(f)+'px'; fretboard.appendChild(m); if(f===12){const m2=m.cloneNode(); m2.style.left='42%'; const m3=m.cloneNode(); m3.style.left='58%'; m.remove(); fretboard.append(m2,m3)}});
       strings.forEach((s,i)=>{const x=xForString(i,strings.length); const st=document.createElement('div'); st.className='string'; st.style.left=x+'px'; st.style.width=(5-i*.55)+'px'; fretboard.appendChild(st); const lab=document.createElement('div'); lab.className='open-label'; lab.style.left=x+'px'; lab.textContent=s[0]; fretboard.appendChild(lab)});
-      selected.forEach(midi=>strings.forEach((s,i)=>{for(let f=0;f<=15;f++){const pitch=s[1]+f; if(pitch===midi){const d=document.createElement('div'); d.className='dot '+colorClass(midi); d.style.left=xForString(i,strings.length)+'px'; d.style.top=yForFret(f)+'px'; d.textContent=NOTE_NAMES[noteClass(midi)]; d.title=`${labelFor(midi)} · ${s[0]}-Saite · Bund ${f}`; fretboard.appendChild(d)}}}));
+      selected.forEach(midi=>strings.forEach((s,i)=>{for(let f=0;f<=15;f++){const pitch=s[1]+f; if(pitch===midi){const d=document.createElement('div'); d.className='dot '+colorClass(midi); d.style.left=xForString(i,strings.length)+'px'; d.style.top=yForFret(f)+'px'; d.textContent=currentLabels()[noteClass(midi)].replace('is','♯'); d.title=`${labelFor(midi)} · ${s[0]}-Saite · Bund ${f}`; fretboard.appendChild(d)}}}));
     }
 
     function makeKeyboard(){
@@ -137,7 +145,7 @@
         const cls=noteClass(midi), name=NOTE_NAMES[cls], oct=Math.floor(midi/12)-1;
         if(whiteOrder.includes(cls)){
           const key=document.createElement('button'); key.className='white-key'; key.dataset.midi=midi; key.style.left=(whiteIndex*whiteW)+'px'; key.textContent=name+oct; piano.appendChild(key); whiteIndex++;
-          if(blackAfter[name]!==undefined && midi<84){const bk=document.createElement('button'); bk.className='black-key'; bk.dataset.midi=midi+1; bk.style.left=(whiteIndex*whiteW-16)+'px'; bk.textContent=NOTE_NAMES[noteClass(midi+1)].replace('#','♯')+oct; piano.appendChild(bk)}
+          if(blackAfter[name]!==undefined && midi<84){const bk=document.createElement('button'); bk.className='black-key'; bk.dataset.midi=midi+1; bk.style.left=(whiteIndex*whiteW-16)+'px'; bk.textContent=(accidentalModeEl.value === 'flat' ? NOTE_LABELS_FLAT[noteClass(midi+1)] : NOTE_LABELS_SHARP[noteClass(midi+1)].replace('is','♯'))+oct; piano.appendChild(bk)}
         }
       }
       piano.style.minWidth=(whiteIndex*whiteW+12)+'px';
@@ -150,14 +158,36 @@
     }
 
     function scoreY(midi){
-      // Violinschlüssel: Linien unten nach oben = E4, G4, H4, D5, F5.
-      // Eine diatonische Stufe entspricht 5px; Vorzeichen ändern den Notenkopf-Platz nicht.
-      const diatonic = {'C':0,'D':1,'E':2,'F':3,'G':4,'A':5,'H':6};
-      const name=NOTE_NAMES[noteClass(midi)].replace('#','');
-      const oct=Math.floor(midi/12)-1;
-      const dIndex=oct*7 + diatonic[name];
-      const e4Index=4*7 + 2;
-      return 135 - (dIndex-e4Index)*5;
+      // Präzise Notenkopf-Position im Violinschlüssel.
+      // Bezugspunkt: unterste Linie = E4 bei y=135.
+      // Jede diatonische Stufe nach oben bewegt den Kopf exakt 5px nach oben:
+      // E4 Linie, F4 Zwischenraum, G4 Linie, A4 Zwischenraum, H4 Linie usw.
+      // Vorzeichen ändern nur das Symbol, nie die Linien-/Zwischenraumposition.
+      const STAFF_BOTTOM_E4_Y = 135;
+      const DIATONIC_STEP_PX = 5;
+      const PITCH_CLASS_TO_STEP_SHARP = {
+        0:0, 1:0,   // C, C#
+        2:1, 3:1,   // D, D#
+        4:2,        // E
+        5:3, 6:3,   // F, F#
+        7:4, 8:4,   // G, G#
+        9:5, 10:5,  // A, A#
+        11:6        // H natural
+      };
+      const PITCH_CLASS_TO_STEP_FLAT = {
+        0:0, 1:1,   // C, Des
+        2:1, 3:2,   // D, Es
+        4:2,        // E
+        5:3, 6:4,   // F, Ges
+        7:4, 8:5,   // G, As
+        9:5, 10:6,  // A, B
+        11:6        // H natural
+      };
+      const map = accidentalModeEl.value === 'flat' ? PITCH_CLASS_TO_STEP_FLAT : PITCH_CLASS_TO_STEP_SHARP;
+      const octave = Math.floor(midi / 12) - 1;
+      const stepFromC0 = octave * 7 + map[noteClass(midi)];
+      const e4StepFromC0 = 4 * 7 + 2;
+      return STAFF_BOTTOM_E4_Y - (stepFromC0 - e4StepFromC0) * DIATONIC_STEP_PX;
     }
     function drawScore(){
       scoreNotes.innerHTML='';
@@ -166,8 +196,9 @@
         const x=165 + idx*34 - Math.max(0,selected.length-1)*17, y=scoreY(displayMidi);
         for(let ly=145; ly<=y+1; ly+=10){ const l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',x-20); l.setAttribute('x2',x+20); l.setAttribute('y1',ly); l.setAttribute('y2',ly); l.setAttribute('stroke','#111827'); l.setAttribute('stroke-width','2'); scoreNotes.appendChild(l); }
         for(let ly=45; ly>=y-1; ly-=10){ const l=document.createElementNS('http://www.w3.org/2000/svg','line'); l.setAttribute('x1',x-20); l.setAttribute('x2',x+20); l.setAttribute('y1',ly); l.setAttribute('y2',ly); l.setAttribute('stroke','#111827'); l.setAttribute('stroke-width','2'); scoreNotes.appendChild(l); }
-        if(NOTE_NAMES[noteClass(displayMidi)].includes('#')){const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',x-43); t.setAttribute('y',y+8); t.setAttribute('font-size','24'); t.setAttribute('fill','#111827'); t.setAttribute('font-family','Georgia,serif'); t.textContent='♯'; scoreNotes.appendChild(t)}
-        const e=document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.setAttribute('cx',x); e.setAttribute('cy',y); e.setAttribute('rx','12'); e.setAttribute('ry','8'); e.setAttribute('fill','#0f172a'); e.setAttribute('transform',`rotate(-18 ${x} ${y})`); scoreNotes.appendChild(e);
+        const accidental = accidentalModeEl.value === 'flat' ? ({1:'♭',3:'♭',6:'♭',8:'♭',10:'♭'}[noteClass(displayMidi)] || '') : ({1:'♯',3:'♯',6:'♯',8:'♯',10:'♯'}[noteClass(displayMidi)] || '');
+        if(accidental){const t=document.createElementNS('http://www.w3.org/2000/svg','text'); t.setAttribute('x',x-48); t.setAttribute('y',y+8); t.setAttribute('font-size','25'); t.setAttribute('fill','#111827'); t.setAttribute('font-family','Georgia,serif'); t.textContent=accidental; scoreNotes.appendChild(t)}
+        const e=document.createElementNS('http://www.w3.org/2000/svg','ellipse'); e.setAttribute('cx',x); e.setAttribute('cy',y); e.setAttribute('rx','10.5'); e.setAttribute('ry','7'); e.setAttribute('fill','#0f172a'); e.setAttribute('transform',`rotate(-18 ${x} ${y})`); scoreNotes.appendChild(e);
         const stem=document.createElementNS('http://www.w3.org/2000/svg','line'); stem.setAttribute('x1',x+10); stem.setAttribute('x2',x+10); stem.setAttribute('y1',y-2); stem.setAttribute('y2',y-50); stem.setAttribute('stroke','#0f172a'); stem.setAttribute('stroke-width','3'); scoreNotes.appendChild(stem);
       });
     }
@@ -179,7 +210,7 @@
       drawScore(); drawFretboard();
     }
     piano.addEventListener('click',e=>{const key=e.target.closest('button[data-midi]'); if(!key)return; const midi=Number(key.dataset.midi); selected = selected.includes(midi) ? selected.filter(x=>x!==midi) : [...selected,midi].sort((a,b)=>a-b); updateUI();});
-    clearBtn.addEventListener('click',()=>{selected=[];updateUI();}); instrumentEl.addEventListener('change',updateUI); window.addEventListener('resize',drawFretboard);
+    clearBtn.addEventListener('click',()=>{selected=[];updateUI();}); instrumentEl.addEventListener('change',updateUI); accidentalModeEl.addEventListener('change',()=>{makeKeyboard(); updateUI();}); window.addEventListener('resize',drawFretboard);
     makeKeyboard(); updateUI();
   </script>
 </body>
