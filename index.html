@@ -50,7 +50,7 @@
         </select>
         <select id="soundMode" aria-label="Klang wählen">
           <option value="nylon">Nylon-Gitarre</option>
-          <option value="electric">E-Gitarre</option>
+          <option value="bass">E-Bass</option>
         </select>
         <button id="clearBtn" title="Auswahl löschen">Zurücksetzen</button>
       </div>
@@ -82,7 +82,6 @@
             <button id="playSelectionBtn" title="Aktuelle Auswahl anhören">Auswahl abspielen</button>
             <label class="vol-wrap">Lautstärke <input id="volume" type="range" min="0" max="1" step="0.01" value="0.35"></label>
           </div>
-          <div class="footer">Audio wird beim ersten Klick aktiviert. Nylon und E-Gitarre sind browserbasierte Synth-Sounds ohne externe Dateien.</div>
         </section>
       </aside>
 
@@ -268,29 +267,29 @@
       master.connect(ctx.destination);
 
       const mode = soundModeEl?.value || 'nylon';
-      const dur = mode === 'electric' ? 1.85 : 1.45;
+      const dur = mode === 'bass' ? 2.25 : 1.45;
       const noteGain = ctx.createGain();
       noteGain.connect(master);
-      pluckEnvelope(noteGain, now, mode === 'electric' ? 0.34 : 0.42, mode === 'electric' ? 0.11 : 0.06, dur);
+      pluckEnvelope(noteGain, now, mode === 'bass' ? 0.46 : 0.42, mode === 'bass' ? 0.18 : 0.06, dur);
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(mode === 'electric' ? 3400 : 2100, now);
-      filter.frequency.exponentialRampToValueAtTime(mode === 'electric' ? 1300 : 650, now + dur);
-      filter.Q.value = mode === 'electric' ? 1.2 : 0.75;
+      filter.frequency.setValueAtTime(mode === 'bass' ? 900 : 2100, now);
+      filter.frequency.exponentialRampToValueAtTime(mode === 'bass' ? 240 : 650, now + dur);
+      filter.Q.value = mode === 'bass' ? 0.9 : 0.75;
       filter.connect(noteGain);
 
-      if(mode === 'electric'){
+      if(mode === 'bass'){
         const shaper = ctx.createWaveShaper();
-        shaper.curve = makeDistortionCurve(90);
+        shaper.curve = makeDistortionCurve(18);
         shaper.oversample = '4x';
         shaper.connect(filter);
         [1,2,3].forEach((ratio, i)=>{
           const osc = ctx.createOscillator();
           const g = ctx.createGain();
-          osc.type = i === 0 ? 'sawtooth' : 'triangle';
+          osc.type = i === 0 ? 'triangle' : 'sine';
           osc.frequency.setValueAtTime(freq * ratio, now);
-          g.gain.setValueAtTime([0.22,0.055,0.022][i], now);
+          g.gain.setValueAtTime([0.38,0.12,0.045][i], now);
           osc.connect(g); g.connect(shaper);
           osc.start(now); osc.stop(now + dur + 0.08);
         });
@@ -311,7 +310,7 @@
       const data = noiseBuffer.getChannelData(0);
       for(let i=0;i<data.length;i++) data[i] = (Math.random()*2-1) * Math.pow(1-i/data.length, 2);
       const noise = ctx.createBufferSource(); noise.buffer = noiseBuffer;
-      const ng = ctx.createGain(); ng.gain.setValueAtTime(mode === 'electric' ? 0.025 : 0.018, now);
+      const ng = ctx.createGain(); ng.gain.setValueAtTime(mode === 'bass' ? 0.012 : 0.018, now);
       noise.connect(ng); ng.connect(filter); noise.start(now); noise.stop(now + 0.04);
     }
     function playSelection(){
@@ -326,7 +325,7 @@
       drawScore(); drawFretboard();
     }
     piano.addEventListener('click',e=>{const key=e.target.closest('button[data-midi]'); if(!key)return; const midi=Number(key.dataset.midi); playNote(midi); selected = selected.includes(midi) ? selected.filter(x=>x!==midi) : [...selected,midi].sort((a,b)=>a-b); updateUI();});
-    playSelectionBtn.addEventListener('click',playSelection); clearBtn.addEventListener('click',()=>{selected=[];updateUI();}); instrumentEl.addEventListener('change',()=>{selected=[]; makeKeyboard(); updateUI();}); accidentalModeEl.addEventListener('change',()=>{makeKeyboard(); updateUI();}); window.addEventListener('resize',drawFretboard);
+    playSelectionBtn.addEventListener('click',playSelection); clearBtn.addEventListener('click',()=>{selected=[];updateUI();}); instrumentEl.addEventListener('change',()=>{selected=[]; if(soundModeEl) soundModeEl.value = instrumentEl.value === 'guitar' ? 'nylon' : 'bass'; makeKeyboard(); updateUI();}); accidentalModeEl.addEventListener('change',()=>{makeKeyboard(); updateUI();}); window.addEventListener('resize',drawFretboard);
     makeKeyboard(); updateUI();
   </script>
 </body>
