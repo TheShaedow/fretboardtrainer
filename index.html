@@ -251,14 +251,14 @@
         label: 'Nylon-Gitarre',
         url: 'https://surikov.github.io/webaudiofontdata/sound/0240_JCLive_sf2_file.js',
         name: '_tone_0240_JCLive_sf2_file',
-        duration: 2.6,
+        duration: 1.05,
         gain: 0.62
       },
       bass: {
         label: 'E-Bass',
         url: 'https://surikov.github.io/webaudiofontdata/sound/0330_Aspirin_sf2_file.js',
         name: '_tone_0330_Aspirin_sf2_file',
-        duration: 2.8,
+        duration: 1.15,
         gain: 0.82
       }
     };
@@ -338,15 +338,15 @@
       master.connect(ctx.destination);
 
       const mode = instrumentEl.value === 'guitar' ? 'nylon' : 'bass';
-      const dur = mode === 'bass' ? 2.25 : 1.45;
+      const dur = mode === 'bass' ? 1.15 : 1.05;
       const noteGain = ctx.createGain();
       noteGain.connect(master);
-      pluckEnvelope(noteGain, now, mode === 'bass' ? 0.46 : 0.42, mode === 'bass' ? 0.18 : 0.06, dur);
+      pluckEnvelope(noteGain, now, mode === 'bass' ? 0.46 : 0.42, mode === 'bass' ? 0.10 : 0.06, dur);
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(mode === 'bass' ? 900 : 2100, now);
-      filter.frequency.exponentialRampToValueAtTime(mode === 'bass' ? 240 : 650, now + dur);
+      filter.frequency.exponentialRampToValueAtTime(mode === 'bass' ? 220 : 650, now + dur);
       filter.Q.value = mode === 'bass' ? 0.9 : 0.75;
       filter.connect(noteGain);
 
@@ -383,7 +383,7 @@
     }
     function playSelection(){
       if(selected.length === 0) return;
-      selected.forEach((midi, idx) => playNote(midi, selected.length > 1 ? idx * 0.018 : 0));
+      selected.forEach((midi, idx) => playNote(midi, selected.length > 1 ? idx * 0.022 : 0));
     }
     function playSequence(){
       if(selected.length === 0) return;
